@@ -34,18 +34,19 @@ setu_save保存后下一次调用碰到这个setu就不需要再下载
 一般无需科学上网, 确认一下图片代理是否可用:   
 
     一些也许可用的pixiv代理, 用来填入env的setu_proxy变量: "i.pixiv.re" , "sex.nyan.xyz" , "px2.rainchan.win" 
-
+    
     Example:
-
+    
         数据库给的url为: https://i.pixiv.re/img-original/img/2022/07/09/18/51/03/99606781_p0.jpg
-
+    
         有些代理可能会暂时不可用, 可以用来换成可用的代理, 比如px2.rainchan.win
-
+    
         即: https://px2.rainchan.win/img-original/img/2022/07/09/18/51/03/99606781_p0.jpg
-
+    
         能正常访问即可用
-    
-    
+
+
+​    
 
 ## 插件指令
 
@@ -71,7 +72,7 @@ setu命令:
         
         setu
         
-        (空格可去掉)
+        (空格可去掉, 多tag用空格分开 eg:setu 白丝 loli)
 
 添加r18:
 

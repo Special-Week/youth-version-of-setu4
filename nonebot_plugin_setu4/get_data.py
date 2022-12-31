@@ -1,53 +1,56 @@
-from httpx import AsyncClient
-from nonebot.log import logger
+import os
 import random
 import asyncio
 import nonebot
 import sqlite3
-import os
-from pathlib import Path
 from PIL import Image
 from io import BytesIO
+from pathlib import Path
+from httpx import AsyncClient
+from nonebot.log import logger
+
 error = "Error:"
 
 
 # setu下载的代理
 try:
-    setu_proxy = nonebot.get_driver().config.setu_proxy
+    setu_proxy: str = nonebot.get_driver().config.setu_proxy
 except:
-    setu_proxy = 'i.pixiv.re'
+    setu_proxy: str = 'i.pixiv.re'
 # save_path,可在env设置, 默认False, 类型bool或str
 try:
-    save_path = nonebot.get_driver().config.setu_save
-    all_file_name = os.listdir(save_path)
+    save_path: str = nonebot.get_driver().config.setu_save
+    all_file_name: list = os.listdir(save_path)
 except:
-    save_path = False
-    all_file_name = []
-
-
-# 本地setu路径,默认在插件目录下的resource/img
-# img_path = str(Path(os.path.join(os.path.dirname(__file__), "resource/img")))
-# 读取file_name里面的全部文件名
-# all_file_name = os.listdir(img_path)
+    save_path: bool = False
+    all_file_name: list = []
 
 
 # 返回列表,内容为setu消息(列表套娃)
-async def get_setu(keyword="", r18=False, num=1, quality=75) -> list:
+async def get_setu(keywords: list = [], r18: bool = False, num: int = 1, quality: int = 75) -> list:
     data = []
     # 连接数据库
-    # 数据库每个字段分别是 pid, p, title, author, r18, width, height, tags, ext, uploadDate, urls
     conn = sqlite3.connect(
         Path(os.path.join(os.path.dirname(__file__), "resource")) / "lolicon.db")
     cur = conn.cursor()
     # sql操作,根据keyword和r18进行查询拿到数据
-    cursor = cur.execute(
-        f"SELECT pid,title,author,r18,tags,urls from main where (tags like \'%{keyword}%\' or title like \'%{keyword}%\' or author like \'%{keyword}%\') and r18=\'{r18}\' order by random() limit {num}")
+    if keywords == []:   # 如果传入的keywords是空列表, 那么where只限定r18='{r18}'
+        sql = f"SELECT pid,title,author,r18,tags,urls from main where r18='{r18}' order by random() limit {num}"
+    # 如果keywords列表只有一个, 那么从tags, title, author找有内容是keywords[0]的
+    elif len(keywords) == 1:
+        sql = f"SELECT pid,title,author,r18,tags,urls from main where (tags like '%{keywords[0]}%' or title like '%{keywords[0]}%' or author like '%{keywords[0]}%') and r18='{r18}' order by random() limit {num}"
+    else:                   # 多tag的情况下的sql语句
+        tagSql = ""
+        for i in keywords:
+            tagSql += f"tags like '%{i}%'" if i == keywords[-1] else f"tags like '%{i}%' and "
+        sql = f"SELECT pid,title,author,r18,tags,urls from main where (({tagSql}) and r18='{r18}') order by random() limit {num}"
+    cursor = cur.execute(sql)
     db_data = cursor.fetchall()
     # 断开数据库连接
     conn.close()
     # 如果没有返回结果
     if db_data == []:
-        data.append([error, f"图库中没有搜到关于{keyword}的图。", False])
+        data.append([error, f"图库中没有搜到关于{keywords}的图。", False])
         return data
 
     async with AsyncClient() as client:
@@ -60,14 +63,14 @@ async def get_setu(keyword="", r18=False, num=1, quality=75) -> list:
 
 
 # 返回setu消息列表,内容 [图片, 信息, True/False, url]
-async def pic(setu, quality, client):
+async def pic(setu: list, quality: int, client: AsyncClient) -> list:
     setu_pid = setu[0]                   # pid
     setu_title = setu[1]                 # 标题
     setu_author = setu[2]                # 作者
     setu_r18 = setu[3]                   # r18
     setu_tags = setu[4]                  # 标签
-    setu_url = setu[5].replace('i.pixiv.re',setu_proxy)     # 图片url
-    
+    setu_url = setu[5].replace('i.pixiv.re', setu_proxy)     # 图片url
+
     data = (
         "标题:"
         + setu_title
@@ -92,9 +95,9 @@ async def pic(setu, quality, client):
         logger.info(f"图片本地不存在,正在去{setu_proxy}下载")
 
         content = await down_pic(setu_url, client)
-        
+
         #  此次fix结束
-        
+
         if type(content) == int:
             logger.error(f"图片下载失败, 状态码: {content}")
             return [error, f"图片下载失败, 状态码{content}", False, setu_url]
@@ -108,7 +111,7 @@ async def pic(setu, quality, client):
 
 
 # 图片左右镜像
-async def change_pixel(image, quality):
+async def change_pixel(image: Image, quality: int) -> bytes:
     image = image.transpose(Image.FLIP_LEFT_RIGHT)
     image = image.convert("RGB")
     image.load()[0, 0] = (random.randint(0, 255),
@@ -121,7 +124,7 @@ async def change_pixel(image, quality):
 
 
 # 下载图片并且返回content,或者status_code
-async def down_pic(url, client):
+async def down_pic(url: str, client: AsyncClient):
     headers = {
         "Referer": "https://accounts.pixiv.net/login?lang=zh&source=pc&view_type=page&ref=wwwtop_accounts_index",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) "
