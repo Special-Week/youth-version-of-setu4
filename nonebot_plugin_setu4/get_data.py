@@ -87,7 +87,8 @@ async def pic(setu: list, quality: int, client: AsyncClient) -> list:
     file_name = setu_url.split("/")[-1]  # .replace('p', "",1)
 
     # 判断文件是否本地存在
-    if file_name in all_file_name:
+    isInall_file_name = file_name in all_file_name
+    if isInall_file_name:
         logger.info("图片本地存在")
         image = Image.open(save_path + "/" + file_name)
     # 如果没有就下载
@@ -104,6 +105,13 @@ async def pic(setu: list, quality: int, client: AsyncClient) -> list:
     try:
         image = Image.open(BytesIO(content))
         pic = await change_pixel(image, quality)
+        if save_path and not isInall_file_name:
+            try:
+                with open(f"{save_path}/{file_name}", "wb") as f:
+                    f.write(content)
+                all_file_name.append(file_name)
+            except Exception as e:
+                logger.error(f'图片存储失败: {e}')
     except:
         logger.error("图片处理失败")
         return [error, "图片处理失败", False, setu_url]
@@ -134,14 +142,6 @@ async def down_pic(url: str, client: AsyncClient):
         re = await client.get(url=url, headers=headers, timeout=120)
         if re.status_code == 200:
             logger.success("成功获取图片")
-            if save_path:
-                file_name = url.split("/")[-1]
-                try:
-                    with open(f"{save_path}/{file_name}", "wb") as f:
-                        f.write(re.content)
-                    all_file_name.append(file_name)
-                except Exception as e:
-                    logger.error(f'图片存储失败: {e}')
             return re.content
         else:
             return re.status_code
