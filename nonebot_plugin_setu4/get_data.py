@@ -87,34 +87,35 @@ async def pic(setu: list, quality: int, client: AsyncClient) -> list:
     file_name = setu_url.split("/")[-1]  # .replace('p', "",1)
 
     # 判断文件是否本地存在
-    isInall_file_name = file_name in all_file_name
-    if isInall_file_name:
+    isInAllFileName = file_name in all_file_name
+    if isInAllFileName:
         logger.info("图片本地存在")
         image = Image.open(save_path + "/" + file_name)
     # 如果没有就下载
     else:
         logger.info(f"图片本地不存在,正在去{setu_proxy}下载")
-
         content = await down_pic(setu_url, client)
-
-        #  此次fix结束
-
         if type(content) == int:
             logger.error(f"图片下载失败, 状态码: {content}")
             return [error, f"图片下载失败, 状态码{content}", False, setu_url]
-    try:
-        image = Image.open(BytesIO(content))
-        pic = await change_pixel(image, quality)
-        if save_path and not isInall_file_name:
+        # 尝试打开图片, 如果失败就返回错误信息
+        try:
+            image = Image.open(BytesIO(content))
+        except Exception as e:
+            return [error, f"图片下载失败, 错误信息:{e}", False, setu_url]
+        # 保存图片, 如果save_path不为空, 以及图片不在all_file_name中, 那么就保存图片
+        if save_path and not isInAllFileName:
             try:
                 with open(f"{save_path}/{file_name}", "wb") as f:
                     f.write(content)
                 all_file_name.append(file_name)
             except Exception as e:
                 logger.error(f'图片存储失败: {e}')
-    except:
+    try:
+        pic = await change_pixel(image, quality)
+    except Exception as e:
         logger.error("图片处理失败")
-        return [error, "图片处理失败", False, setu_url]
+        return [error, f"图片处理失败: {e}", False, setu_url]
     return [pic, data, True, setu_url]
 
 
