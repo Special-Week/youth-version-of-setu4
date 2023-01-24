@@ -80,7 +80,6 @@ async def _(bot: Bot, event: MessageEvent, state: T_State):
         flagLog = f"\nR18 == {str(r18)}\nkeyword == NULL\nnum == {num}\n"
     else:
         flagLog = f"\nR18 == {str(r18)}\nkeyword == {key}\nnum == {num}\n"
-
     logger.info(f"key = {key}\tr18 = {r18}\tnum = {num}")       # 控制台输出
 
     # cd判断,superusers无视cd
@@ -91,7 +90,10 @@ async def _(bot: Bot, event: MessageEvent, state: T_State):
         # 记录cd
         cd_dir.update({qid: event.time})
         # data是数组套娃, 数组中的每个元素内容为: [图片, 信息, True/False, url]
-        data = await get_setu(key, r18, num, quality)
+        try:
+            data = await get_setu(key, r18, num, quality)
+        except Exception as e:
+            await setu.finish(f"Error: " + str(e))
 
         # 发送的消息列表
         message_list = []
