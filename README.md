@@ -33,7 +33,7 @@ setu_save保存后下一次调用碰到这个setu就不需要再下载
 
 一般无需科学上网, 确认一下图片代理是否可用:   
 
-    一些也许可用的pixiv代理, 用来填入env的setu_proxy变量: "i.pixiv.re" , "sex.nyan.xyz" , "px2.rainchan.win" 
+    一些也许可用的pixiv代理, 用来填入env的setu_proxy变量: "i.pixiv.re" , "sex.nyan.xyz" , "px2.rainchan.win" , "pximg.moonchan.xyz" , "piv.deception.world" , "px3.rainchan.win" , "px.s.rainchan.win" , "pixiv.yuki.sh" , "pixiv.kagarise.workers.dev" , "pixiv.kagarise.workers.dev"
     
     Example:
     
