@@ -3,7 +3,7 @@
 内置数据库的setu插件, 另外尝试降低因为风控发不出图的概率(随机修改左上角一颗像素点) (tx好像改了算法, 作用不明显了)
 
 
-### 数据库记录70359条
+### 目前数据库去除unavailable, 共72642条记录
 
 ghs比较纯粹, 只有一般的权限控制, 相比完整版功能简单
 
@@ -22,7 +22,6 @@ ghs比较纯粹, 只有一般的权限控制, 相比完整版功能简单
 |config             |type            |default|example                          |usage                 |
 |-------------------|----------------|-------|---------------------------------|----------------------|
 |setu_cd            |int             |20     |setu_cd = 30                     |setu的cd              |
-|setu_ban           |tuple[str, int] |None   |setu_ban = ["114514", "1919810"] |禁用名单(群号或QQ号)    |
 |setu_withdraw_time |int             |100    |setu_withdraw_time = 30          |setu撤回时间           |
 |setu_max_num       |int             |10     |setu_max_num = 20                |setu一次性最大数量     |
 |setu_save          |str             |None   |setu_save = './data/setu4/img'   |setu时候保存到本地的路径  可用绝对路径|
@@ -43,7 +42,7 @@ setu_save保存后下一次调用碰到这个setu就不需要再下载
     
         即: https://px2.rainchan.win/img-original/img/2022/07/09/18/51/03/99606781_p0.jpg
     
-        能正常访问即可用
+        能正常访问即可用, 详情请看下文superuser指令
 
 
 ​    
@@ -74,14 +73,30 @@ setu命令:
         
         (空格可去掉, 多tag用空格分开 eg:setu 白丝 loli)
 
-添加r18:
 
-    add_r18 xxxxx   (xxxx为qq号码或者群聊号码, 当为qq号码时, 该人在任意有你的bot的群都能在群聊触发r18, 当为群号时, 该群任意人都可以触发r18)
 
-撤销r18:
+superuser指令:
 
-    del_r18 xxxxx
+r18名单: 查看r18有哪些群聊或者账号
+    add_r18 xxx: 添加r18用户/群聊
 
-查看r18列表:
+    del_r18 xxx: 移除r18用户
 
-    r18名单
+    disactivate | 解除禁用 xxx: 恢复该群的setu功能
+
+    ban_setu xxx: 禁用xxx群聊的色图权限
+
+    setu_proxy 更换setu代理(当默pixiv.re不可用时), 先发送setu_proxy, 然后他会给你一个魔方阵, 自己选择用哪个, 也可以用自己的
+
+
+
+群主/管理员指令:
+
+    ban_setu: 禁用当前群聊功能, 解除需要找superuser
+
+
+
+其他指令:
+
+    setu_help
+    

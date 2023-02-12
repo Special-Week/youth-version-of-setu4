@@ -8,15 +8,11 @@ from io import BytesIO
 from pathlib import Path
 from httpx import AsyncClient
 from nonebot.log import logger
+from .config import *
 
 error = "Error:"
 
 
-# setu下载的代理
-try:
-    setu_proxy: str = nonebot.get_driver().config.setu_proxy
-except:
-    setu_proxy: str = 'i.pixiv.re'
 # save_path,可在env设置, 默认False, 类型bool或str
 try:
     save_path: str = nonebot.get_driver().config.setu_save
@@ -35,15 +31,15 @@ async def get_setu(keywords: list = [], r18: bool = False, num: int = 1, quality
     cur = conn.cursor()
     # sql操作,根据keyword和r18进行查询拿到数据
     if keywords == []:   # 如果传入的keywords是空列表, 那么where只限定r18='{r18}'
-        sql = f"SELECT pid,title,author,r18,tags,urls from main where r18='{r18}' order by random() limit {num}"
+        sql = f"SELECT pid,title,author,r18,tags,urls from main where r18='{r18}' and status!='unavailable' order by random() limit {num}"
     # 如果keywords列表只有一个, 那么从tags, title, author找有内容是keywords[0]的
     elif len(keywords) == 1:
-        sql = f"SELECT pid,title,author,r18,tags,urls from main where (tags like '%{keywords[0]}%' or title like '%{keywords[0]}%' or author like '%{keywords[0]}%') and r18='{r18}' order by random() limit {num}"
+        sql = f"SELECT pid,title,author,r18,tags,urls from main where (tags like '%{keywords[0]}%' or title like '%{keywords[0]}%' or author like '%{keywords[0]}%') and r18='{r18}' and status!='unavailable' order by random() limit {num}"
     else:                   # 多tag的情况下的sql语句
         tagSql = ""
         for i in keywords:
             tagSql += f"tags like '%{i}%'" if i == keywords[-1] else f"tags like '%{i}%' and "
-        sql = f"SELECT pid,title,author,r18,tags,urls from main where (({tagSql}) and r18='{r18}') order by random() limit {num}"
+        sql = f"SELECT pid,title,author,r18,tags,urls from main where (({tagSql}) and r18='{r18}' and status!='unavailable') order by random() limit {num}"
     cursor = cur.execute(sql)
     db_data = cursor.fetchall()
     # 断开数据库连接
@@ -58,12 +54,12 @@ async def get_setu(keywords: list = [], r18: bool = False, num: int = 1, quality
         for setu in db_data:
             tasks.append(pic(setu, quality, client))
         data = await asyncio.gather(*tasks)
-
     return data
 
 
 # 返回setu消息列表,内容 [图片, 信息, True/False, url]
 async def pic(setu: list, quality: int, client: AsyncClient) -> list:
+    setu_proxy = ReadProxy()            # 读取代理
     setu_pid = setu[0]                   # pid
     setu_title = setu[1]                 # 标题
     setu_author = setu[2]                # 作者
@@ -96,8 +92,8 @@ async def pic(setu: list, quality: int, client: AsyncClient) -> list:
         logger.info(f"图片本地不存在,正在去{setu_proxy}下载")
         content = await down_pic(setu_url, client)
         if type(content) == int:
-            logger.error(f"图片下载失败, 状态码: {content}")
-            return [error, f"图片下载失败, 状态码{content}", False, setu_url]
+            if content == 404:              # 如果是404, 404表示文件不存在, 说明作者删除了图片, 那么就把这个url的status改为unavailable, 下次sql操作的时候就不会再拿到这个url了
+                await update_status_unavailable(setu[5])  # setu[5]是原始url, 不能拿换过代理的url
         # 尝试打开图片, 如果失败就返回错误信息
         try:
             image = Image.open(BytesIO(content))
@@ -148,3 +144,15 @@ async def down_pic(url: str, client: AsyncClient):
             return re.status_code
     except:
         return 408
+
+
+# 更新数据库中的图片状态为unavailable
+async def update_status_unavailable(urls):
+    # 连接数据库
+    conn = sqlite3.connect(
+        Path(os.path.join(os.path.dirname(__file__), "resource")) / "lolicon.db")   
+    cur = conn.cursor()
+    sql = f"UPDATE main set status='unavailable' where urls='{urls}'"   # 手搓sql语句
+    cur.execute(sql)                    #执行
+    conn.commit()                   # 提交事务
+    conn.close()                    # 关闭连接

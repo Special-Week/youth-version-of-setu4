@@ -1,13 +1,16 @@
 import random
 import asyncio
 import nonebot
+import platform
 from re import I, sub
 from nonebot.log import logger
 from nonebot.typing import T_State
-from nonebot.params import CommandArg
+from nonebot.matcher import Matcher
 from nonebot.permission import SUPERUSER
 from nonebot import on_command, on_regex
 from nonebot.exception import ActionFailed
+from nonebot.params import CommandArg,ArgPlainText
+from nonebot.adapters.onebot.v11.permission import GROUP_OWNER, GROUP_ADMIN
 from nonebot.adapters.onebot.v11 import (GROUP, PRIVATE_FRIEND, Bot,
                                          GroupMessageEvent, Message,
                                          MessageEvent, MessageSegment,
@@ -30,27 +33,13 @@ setu = on_regex(
 # 响应器处理操作
 @setu.handle()
 async def _(bot: Bot, event: MessageEvent, state: T_State):
-    args = list(state["_matched_groups"])
-    r18flag = args[2]
-    key = args[3]
+    args = list(state["_matched_groups"])       # 获取正则匹配到的参数
+    r18flag = args[2]                    # 获取r18参数
+    key = args[3]                 # 获取关键词参数
     key = sub('[\'\"]', '', key)  # 去掉引号防止sql注入
-    num = args[1]
-    num = int(sub(r"[张|个|份|x|✖️|×|X|*]", "", num)) if num else 1
+    num = args[1]          # 获取数量参数
+    num = int(sub(r"[张|个|份|x|✖️|×|X|*]", "", num)) if num else 1 
 
-    if num > max_num or num < 1:
-        await setu.finish(f"数量需要在1-{max_num}之间")
-
-    # 色图图片质量, 如果num为3-6质量为70,如果num为7-max质量为50,其余为95(图片质量太高发起来太费时间了)
-    # 注:quality值95为原图
-    if num >= 3 and num <= 6:
-        quality = 70
-    elif num >= 7:
-        quality = 50
-    else:
-        quality = 95
-
-    if num >= 3:
-        await setu.send(f"由于数量过多请等待\n当前图片质量为{quality}\n3-6:quality = 70\n7-{max_num}:quality = 50")
 
     qid = event.get_user_id()
     sid = event.get_session_id()
@@ -58,6 +47,13 @@ async def _(bot: Bot, event: MessageEvent, state: T_State):
     for session_id in banlist:
         if str(session_id) in sid:
             await setu.finish("涩图功能已在此会话中禁用！")
+
+
+    if num > max_num or num < 1:
+        await setu.finish(f"数量需要在1-{max_num}之间")
+
+
+
     try:
         cd = event.time - cd_dir[qid]
     except KeyError:
@@ -87,6 +83,17 @@ async def _(bot: Bot, event: MessageEvent, state: T_State):
         cd > cdTime
         or event.get_user_id() in nonebot.get_driver().config.superusers
     ):
+        # 色图图片质量, 如果num为3-6质量为70,如果num为7-max质量为50,其余为95(图片质量太高发起来太费时间了)
+        # 注:quality值95为原图
+        if num >= 3 and num <= 6:
+            quality = 70
+        elif num >= 7:
+            quality = 50
+        else:
+            quality = 95
+
+        if num >= 3:
+            await setu.send(f"由于数量过多请等待\n当前图片质量为{quality}\n3-6:quality = 70\n7-{max_num}:quality = 50")
         # 记录cd
         cd_dir.update({qid: event.time})
         # data是数组套娃, 数组中的每个元素内容为: [图片, 信息, True/False, url]
@@ -165,11 +172,13 @@ addr18list = on_command("add_r18", permission=SUPERUSER,
 async def _(arg: Message = CommandArg()):
     # 获取消息文本
     msg = arg.extract_plain_text().strip().split()[0]
+    # 如果不是数字就返回
+    if not msg.isdigit():
+        await addr18list.finish("ID:"+msg+"不是数字")
     r18list.append(msg)
     # 写入文件
-    with open("data/youth-version-of-setu4/r18list.txt", "w") as f:
-        for i in r18list:
-            f.write(i + "\n")
+    config_json.update({"r18list": r18list})
+    write_configjson()
     await addr18list.finish("ID:"+msg+"添加成功")
 
 
@@ -187,18 +196,106 @@ async def _(arg: Message = CommandArg()):
     except ValueError:
         await del_r18list.finish("ID:"+msg+"不存在")
     # 写入文件
-    with open("data/youth-version-of-setu4/r18list.txt", 'w') as file:
-        # 将删除行后的数据写入文件
-        for i in r18list:
-            file.write(i + "\n")
-
+    config_json.update({"r18list": r18list})
+    write_configjson()
     await del_r18list.finish("ID:"+msg+"删除成功")
-
+    
 
 get_r18list = on_command("r18名单", permission=SUPERUSER,
                          block=True, priority=10)
 
-
 @get_r18list.handle()
 async def _():
     await get_r18list.finish("R18名单：\n" + str(r18list))
+
+
+
+# 输出帮助信息
+setu_help = on_command(
+    "setu_help", block=True, priority=9)
+
+@setu_help.handle()
+async def _():
+    reply = """命令头: setu|色图|涩图|想色色|来份色色|来份色图|想涩涩|多来点|来点色图|来张setu|来张色图|来点色色|色色|涩涩  (任意一个)
+参数可接r18, 数量, 关键词
+eg:         
+setu 10张 r18 白丝
+setu 10张 白丝
+setu r18 白丝        
+setu 白丝        
+setu
+(空格可去掉, 多tag用空格分开 eg:setu 白丝 loli)
+
+superuser指令:
+r18名单: 查看r18有哪些群聊或者账号
+add_r18 xxx: 添加r18用户/群聊
+del_r18 xxx: 移除r18用户
+disactivate | 解除禁用 xxx: 恢复该群的setu功能
+ban_setu xxx: 禁用xxx群聊的色图权限
+
+群主/管理员:
+ban_setu: 禁用当前群聊功能, 解除需要找superuser"""
+    await setu_help.finish(reply)
+
+admin_ban_setu = on_command("ban_setu",aliases={"setu_ban","禁用色图"}, permission=GROUP_OWNER|GROUP_ADMIN,priority=9,block=True)
+@admin_ban_setu.handle()
+async def _(event:GroupMessageEvent):
+    gid:str = str(event.group_id)
+    banlist.append(gid)
+    config_json.update({"banlist": banlist})
+    write_configjson()
+    await disactivate.finish("ID:"+gid+"禁用成功, 恢复需要找superuser")
+
+su_ban_setu = on_command("ban_setu",aliases={"setu_ban","禁用色图"}, permission=SUPERUSER,priority=8,block=True)
+@su_ban_setu.handle()
+async def _(arg: Message = CommandArg()):
+    # 获取消息文本
+    msg = arg.extract_plain_text().strip().split()[0]
+    if not msg.isdigit():
+        await addr18list.finish("ID:"+msg+"不是数字")
+    banlist.append(msg)
+    config_json.update({"banlist": banlist})
+    write_configjson()
+    await disactivate.finish("ID:"+msg+"禁用成功")
+
+
+disactivate = on_command("disactivate",aliases={"解除禁用"}, permission=SUPERUSER, priority=9,block=True)
+@disactivate.handle()
+async def _(arg: Message = CommandArg()):
+    # 获取消息文本
+    msg = arg.extract_plain_text().strip().split()[0]
+    try:
+        banlist.remove(msg)
+    except ValueError:
+        await disactivate.finish("ID:"+msg+"不存在")
+    config_json.update({"banlist": banlist})
+    write_configjson()
+    await disactivate.finish("ID:"+msg+"删除成功")
+
+
+
+# --------------- 更换代理 ---------------
+replaceProxy = on_command(
+    "更换代理", aliases={"替换代理", "setu_proxy"}, permission=SUPERUSER, block=True, priority=9)
+
+
+@replaceProxy.handle()
+async def _(matcher: Matcher, arg: Message = CommandArg()):
+    msg = arg.extract_plain_text().strip()
+    if msg:
+        matcher.set_arg("proxy", arg)
+
+
+@replaceProxy.got("proxy", prompt=f"请输入你要替换的proxy, 当前proxy为:{ReadProxy()}\ntips: 一些也许可用的proxy\ni.pixiv.re\nsex.nyan.xyz\npx2.rainchan.win\npximg.moonchan.xyz\npiv.deception.world\npx3.rainchan.win\npx.s.rainchan.win\npixiv.yuki.sh\npixiv.kagarise.workers.dev\npixiv.a-f.workers.dev\n等等....\n\neg:px2.rainchan.win\n警告:不要尝试命令行注入其他花里胡哨的东西, 可能会损伤你的电脑")
+async def _(proxy: str = ArgPlainText("proxy")):
+    setu_proxy = proxy.strip()
+    WriteProxy(setu_proxy)
+    await replaceProxy.send(f"{proxy}已经替换, 正在尝试ping操作验证连通性")
+    # 警告: 这部分带了一个ping代理服务器的操作, 这个响应器是superuser only, 用了os.popen().read()操作, 请不要尝试给自己电脑注入指令
+    # 不会真的有弱智会这么做吧
+    plat = platform.system().lower()
+    if plat == 'windows':
+        result = os.popen(f"ping {setu_proxy}").read()
+    elif plat == 'linux':
+        result = os.popen(f"ping -c 4 {setu_proxy}").read()
+    await replaceProxy.send(f"{result}\n如果丢失的数据比较多, 请考虑重新更换代理")

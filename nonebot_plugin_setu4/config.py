@@ -1,6 +1,6 @@
 import os
+import json
 import nonebot
-from nonebot.log import logger
 
 # 色图cd容器
 cd_dir: dict = {}
@@ -11,11 +11,6 @@ try:
 except:
     cdTime: int = 20
 
-# setu_ban名单,可在env设置,类型string列表
-try:
-    banlist: list = nonebot.get_driver().config.setu_ban
-except:
-    banlist: list = []
 
 # 撤回时间,可在env设置,默认100s,类型int
 try:
@@ -30,35 +25,57 @@ except:
     max_num: int = 10
 
 
-# 先读一读试试
-try:
-    fp = open('data/youth-version-of-setu4/r18list.txt')
-    fp.close()
-# 没有的话咱就新建
-except:
-    # 尝试新建data文件夹
-    try:
+# 读取r18list
+if os.path.exists('data/youth-version-of-setu4/config.json'):
+    with open('data/youth-version-of-setu4/config.json', 'r', encoding="utf-8") as fp:
+        config_json = json.load(fp)
+else:  # 不存在则创建
+    if not os.path.exists('data/youth-version-of-setu4'):
         os.makedirs('data/youth-version-of-setu4')
-    except FileExistsError:
-        logger.info('data/youth-version-of-setu4文件夹已存在')
-    except Exception as e:
-        raise Exception(
-            f'无法新建data/youth-version-of-setu4文件夹, 请检查您的工作路径及读写权限!\n{e}')
-    fp = open('data/youth-version-of-setu4/r18list.txt', 'w')
-    fp.write("114514\n")
-    fp.close()
+    config_json = {
+        "r18list": [],
+        "banlist": [],
+        "setu_proxy":"i.pixiv.re"
+        }
+    with open('data/youth-version-of-setu4/config.json', 'w', encoding="utf-8") as fp:
+        json.dump(config_json, fp, ensure_ascii=False)
+"""
+json结构:
+{
+    "r18list": [
+        "123456789",
+        "987654321"
+    ],
+    "banlist": [
+        "123456789",
+        "987654321"
+    ],
+    "setu_proxy":"i.pixiv.re"
+}
+"""
 
+def write_configjson():
+    """写入json"""
+    with open('data/youth-version-of-setu4/config.json', 'w', encoding="utf-8") as fp:
+        json.dump(config_json, fp, ensure_ascii=False)
 
-r18list = []
-with open('data/youth-version-of-setu4/r18list.txt', 'r') as fp:
-    while True:
-        line = fp.readline()
-        if not line:
-            break
-        r18list.append(line.strip("\n"))
+def ReadProxy():
+    """读取代理"""
+    return config_json["setu_proxy"]
+
+def WriteProxy(proxy):
+    """写入代理"""
+    config_json["setu_proxy"] = proxy
+    write_configjson()
+
+# r18允许的列表["123456789","987654321"]
+r18list = config_json["r18list"]
+banlist = config_json["banlist"]
+
 
 
 def to_json(msg, name: str, uin: str) -> dict:
+    """转换为dict, 转发消息用"""
     return {
         'type': 'node',
         'data': {
