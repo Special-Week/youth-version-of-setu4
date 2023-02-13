@@ -29,7 +29,7 @@ async def get_setu(keywords: list = [], r18: bool = False, num: int = 1, quality
     conn = sqlite3.connect(
         Path(os.path.join(os.path.dirname(__file__), "resource")) / "lolicon.db")
     cur = conn.cursor()
-    # sql操作,根据keyword和r18进行查询拿到数据
+    # sql操作,根据keyword和r18进行查询拿到数据, sql操作要避免选中status为unavailable的
     if keywords == []:   # 如果传入的keywords是空列表, 那么where只限定r18='{r18}'
         sql = f"SELECT pid,title,author,r18,tags,urls from main where r18='{r18}' and status!='unavailable' order by random() limit {num}"
     # 如果keywords列表只有一个, 那么从tags, title, author找有内容是keywords[0]的
@@ -78,9 +78,7 @@ async def pic(setu: list, quality: int, client: AsyncClient) -> list:
 
     logger.info("\n"+data+"\ntags:" +
                 setu_tags+"\nR18:"+setu_r18)
-
-    # 本地图片如果是用well404的脚本爬的话,就把下面的replace代码解除注释
-    file_name = setu_url.split("/")[-1]  # .replace('p', "",1)
+    file_name = setu_url.split("/")[-1]
 
     # 判断文件是否本地存在
     isInAllFileName = file_name in all_file_name
@@ -93,7 +91,8 @@ async def pic(setu: list, quality: int, client: AsyncClient) -> list:
         content = await down_pic(setu_url, client)
         if type(content) == int:
             if content == 404:              # 如果是404, 404表示文件不存在, 说明作者删除了图片, 那么就把这个url的status改为unavailable, 下次sql操作的时候就不会再拿到这个url了
-                await update_status_unavailable(setu[5])  # setu[5]是原始url, 不能拿换过代理的url
+                # setu[5]是原始url, 不能拿换过代理的url
+                await update_status_unavailable(setu[5])
         # 尝试打开图片, 如果失败就返回错误信息
         try:
             image = Image.open(BytesIO(content))
@@ -128,7 +127,7 @@ async def change_pixel(image: Image, quality: int) -> bytes:
     return pic
 
 
-# 下载图片并且返回content,或者status_code
+# 下载图片并且返回content(bytes),或者status_code(int)
 async def down_pic(url: str, client: AsyncClient):
     headers = {
         "Referer": "https://accounts.pixiv.net/login?lang=zh&source=pc&view_type=page&ref=wwwtop_accounts_index",
@@ -147,12 +146,13 @@ async def down_pic(url: str, client: AsyncClient):
 
 
 # 更新数据库中的图片状态为unavailable
-async def update_status_unavailable(urls):
+async def update_status_unavailable(urls: str) -> None:
     # 连接数据库
     conn = sqlite3.connect(
-        Path(os.path.join(os.path.dirname(__file__), "resource")) / "lolicon.db")   
+        Path(os.path.join(os.path.dirname(__file__), "resource")) / "lolicon.db")
     cur = conn.cursor()
-    sql = f"UPDATE main set status='unavailable' where urls='{urls}'"   # 手搓sql语句
-    cur.execute(sql)                    #执行
+    # 手搓sql语句
+    sql = f"UPDATE main set status='unavailable' where urls='{urls}'"
+    cur.execute(sql)  # 执行
     conn.commit()                   # 提交事务
     conn.close()                    # 关闭连接

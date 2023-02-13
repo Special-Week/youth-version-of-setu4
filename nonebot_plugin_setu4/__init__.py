@@ -9,7 +9,7 @@ from nonebot.matcher import Matcher
 from nonebot.permission import SUPERUSER
 from nonebot import on_command, on_regex
 from nonebot.exception import ActionFailed
-from nonebot.params import CommandArg,ArgPlainText
+from nonebot.params import CommandArg, ArgPlainText
 from nonebot.adapters.onebot.v11.permission import GROUP_OWNER, GROUP_ADMIN
 from nonebot.adapters.onebot.v11 import (GROUP, PRIVATE_FRIEND, Bot,
                                          GroupMessageEvent, Message,
@@ -38,8 +38,7 @@ async def _(bot: Bot, event: MessageEvent, state: T_State):
     key = args[3]                 # 获取关键词参数
     key = sub('[\'\"]', '', key)  # 去掉引号防止sql注入
     num = args[1]          # 获取数量参数
-    num = int(sub(r"[张|个|份|x|✖️|×|X|*]", "", num)) if num else 1 
-
+    num = int(sub(r"[张|个|份|x|✖️|×|X|*]", "", num)) if num else 1
 
     qid = event.get_user_id()
     sid = event.get_session_id()
@@ -48,11 +47,8 @@ async def _(bot: Bot, event: MessageEvent, state: T_State):
         if str(session_id) in sid:
             await setu.finish("涩图功能已在此会话中禁用！")
 
-
     if num > max_num or num < 1:
         await setu.finish(f"数量需要在1-{max_num}之间")
-
-
 
     try:
         cd = event.time - cd_dir[qid]
@@ -175,6 +171,9 @@ async def _(arg: Message = CommandArg()):
     # 如果不是数字就返回
     if not msg.isdigit():
         await addr18list.finish("ID:"+msg+"不是数字")
+    # 如果已经存在就返回
+    if msg in r18list:
+        await addr18list.finish("ID:"+msg+"已存在")
     r18list.append(msg)
     # 写入文件
     config_json.update({"r18list": r18list})
@@ -190,29 +189,30 @@ del_r18list = on_command(
 @del_r18list.handle()
 async def _(arg: Message = CommandArg()):
     # 获取消息文本
-    msg = arg.extract_plain_text().strip().split()[0]
-    try:
-        r18list.remove(msg)
-    except ValueError:
+    msg = arg.extract_plain_text().strip()
+    try:    
+        r18list.remove(msg) 
+    except ValueError:              # 如果不存在就返回
         await del_r18list.finish("ID:"+msg+"不存在")
     # 写入文件
-    config_json.update({"r18list": r18list})
-    write_configjson()
+    config_json.update({"r18list": r18list})    # 更新dict
+    write_configjson()                        # 写入文件
     await del_r18list.finish("ID:"+msg+"删除成功")
-    
+
 
 get_r18list = on_command("r18名单", permission=SUPERUSER,
                          block=True, priority=10)
 
+# 直接发送r18名单
 @get_r18list.handle()
 async def _():
     await get_r18list.finish("R18名单：\n" + str(r18list))
 
 
-
 # 输出帮助信息
 setu_help = on_command(
     "setu_help", block=True, priority=9)
+
 
 @setu_help.handle()
 async def _():
@@ -232,46 +232,61 @@ add_r18 xxx: 添加r18用户/群聊
 del_r18 xxx: 移除r18用户
 disactivate | 解除禁用 xxx: 恢复该群的setu功能
 ban_setu xxx: 禁用xxx群聊的色图权限
+setu_proxy: 更换setu代理(会提示一些允许可用的代理)
 
 群主/管理员:
 ban_setu: 禁用当前群聊功能, 解除需要找superuser"""
-    await setu_help.finish(reply)
+    await setu_help.finish(reply)   # 发送
 
-admin_ban_setu = on_command("ban_setu",aliases={"setu_ban","禁用色图"}, permission=GROUP_OWNER|GROUP_ADMIN,priority=9,block=True)
+admin_ban_setu = on_command("ban_setu", aliases={
+                            "setu_ban", "禁用色图"}, permission=GROUP_OWNER | GROUP_ADMIN, priority=9, block=True)
+
+
 @admin_ban_setu.handle()
-async def _(event:GroupMessageEvent):
-    gid:str = str(event.group_id)
+async def _(event: GroupMessageEvent):
+    gid: str = str(event.group_id)
+    # 如果存在
+    if gid in banlist:
+        await admin_ban_setu.finish("ID:"+gid+"已存在")
     banlist.append(gid)
-    config_json.update({"banlist": banlist})
-    write_configjson()
-    await disactivate.finish("ID:"+gid+"禁用成功, 恢复需要找superuser")
+    config_json.update({"banlist": banlist})        # 更新dict
+    write_configjson()                              # 写入文件
+    await admin_ban_setu.finish("ID:"+gid+"禁用成功, 恢复需要找superuser")
 
-su_ban_setu = on_command("ban_setu",aliases={"setu_ban","禁用色图"}, permission=SUPERUSER,priority=8,block=True)
+su_ban_setu = on_command("ban_setu", aliases={
+                         "setu_ban", "禁用色图"}, permission=SUPERUSER, priority=8, block=True)
+
+
 @su_ban_setu.handle()
 async def _(arg: Message = CommandArg()):
     # 获取消息文本
-    msg = arg.extract_plain_text().strip().split()[0]
+    msg = arg.extract_plain_text().strip()
     if not msg.isdigit():
-        await addr18list.finish("ID:"+msg+"不是数字")
-    banlist.append(msg)
-    config_json.update({"banlist": banlist})
-    write_configjson()
+        await su_ban_setu.finish("ID:"+msg+"不是数字")
+    # 如果已经存在就返回
+    if msg in banlist:
+        await su_ban_setu.finish("ID:"+msg+"已存在")
+    banlist.append(msg)            # 添加到list
+    config_json.update({"banlist": banlist})    # 更新dict
+    write_configjson()              # 写入文件
     await disactivate.finish("ID:"+msg+"禁用成功")
 
 
-disactivate = on_command("disactivate",aliases={"解除禁用"}, permission=SUPERUSER, priority=9,block=True)
+disactivate = on_command("disactivate", aliases={
+                         "解除禁用"}, permission=SUPERUSER, priority=9, block=True)
+
+
 @disactivate.handle()
 async def _(arg: Message = CommandArg()):
     # 获取消息文本
-    msg = arg.extract_plain_text().strip().split()[0]
+    msg = arg.extract_plain_text().strip()
     try:
-        banlist.remove(msg)
+        banlist.remove(msg) # 如果不存在就直接finish
     except ValueError:
         await disactivate.finish("ID:"+msg+"不存在")
-    config_json.update({"banlist": banlist})
-    write_configjson()
-    await disactivate.finish("ID:"+msg+"删除成功")
-
+    config_json.update({"banlist": banlist})    # 更新dict 
+    write_configjson()                # 写入文件
+    await disactivate.finish("ID:"+msg+"解除成功")
 
 
 # --------------- 更换代理 ---------------
@@ -281,21 +296,21 @@ replaceProxy = on_command(
 
 @replaceProxy.handle()
 async def _(matcher: Matcher, arg: Message = CommandArg()):
-    msg = arg.extract_plain_text().strip()
+    msg = arg.extract_plain_text().strip()  # 获取消息文本
     if msg:
-        matcher.set_arg("proxy", arg)
+        matcher.set_arg("proxy", arg)   # 设置参数
 
 
 @replaceProxy.got("proxy", prompt=f"请输入你要替换的proxy, 当前proxy为:{ReadProxy()}\ntips: 一些也许可用的proxy\ni.pixiv.re\nsex.nyan.xyz\npx2.rainchan.win\npximg.moonchan.xyz\npiv.deception.world\npx3.rainchan.win\npx.s.rainchan.win\npixiv.yuki.sh\npixiv.kagarise.workers.dev\npixiv.a-f.workers.dev\n等等....\n\neg:px2.rainchan.win\n警告:不要尝试命令行注入其他花里胡哨的东西, 可能会损伤你的电脑")
 async def _(proxy: str = ArgPlainText("proxy")):
-    setu_proxy = proxy.strip()
-    WriteProxy(setu_proxy)
-    await replaceProxy.send(f"{proxy}已经替换, 正在尝试ping操作验证连通性")
+    setu_proxy = proxy.strip()  # 去除空格
+    WriteProxy(setu_proxy)  # 写入proxy
+    await replaceProxy.send(f"{proxy}已经替换, 正在尝试ping操作验证连通性") # 发送消息
     # 警告: 这部分带了一个ping代理服务器的操作, 这个响应器是superuser only, 用了os.popen().read()操作, 请不要尝试给自己电脑注入指令
     # 不会真的有弱智会这么做吧
-    plat = platform.system().lower()
+    plat = platform.system().lower()    # 获取系统
     if plat == 'windows':
-        result = os.popen(f"ping {setu_proxy}").read()
-    elif plat == 'linux':
-        result = os.popen(f"ping -c 4 {setu_proxy}").read()
-    await replaceProxy.send(f"{result}\n如果丢失的数据比较多, 请考虑重新更换代理")
+        result = os.popen(f"ping {setu_proxy}").read()  # windows下的ping
+    elif plat == 'linux':   
+        result = os.popen(f"ping -c 4 {setu_proxy}").read() # linux下的ping
+    await replaceProxy.send(f"{result}\n如果丢失的数据比较多, 请考虑重新更换代理")  # 发送消息

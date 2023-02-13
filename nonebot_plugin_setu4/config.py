@@ -35,10 +35,12 @@ else:  # 不存在则创建
     config_json = {
         "r18list": [],
         "banlist": [],
-        "setu_proxy":"i.pixiv.re"
-        }
+        "setu_proxy": "i.pixiv.re"
+    }
     with open('data/youth-version-of-setu4/config.json', 'w', encoding="utf-8") as fp:
         json.dump(config_json, fp, ensure_ascii=False)
+
+        
 """
 json结构:
 {
@@ -54,24 +56,27 @@ json结构:
 }
 """
 
-def write_configjson():
+
+def write_configjson() -> None:
     """写入json"""
     with open('data/youth-version-of-setu4/config.json', 'w', encoding="utf-8") as fp:
         json.dump(config_json, fp, ensure_ascii=False)
 
-def ReadProxy():
+
+def ReadProxy() -> str:
     """读取代理"""
     return config_json["setu_proxy"]
 
-def WriteProxy(proxy):
+
+def WriteProxy(proxy: str) -> None:
     """写入代理"""
     config_json["setu_proxy"] = proxy
     write_configjson()
 
-# r18允许的列表["123456789","987654321"]
-r18list = config_json["r18list"]
-banlist = config_json["banlist"]
 
+# r18允许的列表["123456789","987654321"]
+r18list: list = config_json["r18list"]
+banlist: list = config_json["banlist"]
 
 
 def to_json(msg, name: str, uin: str) -> dict:
