@@ -3,7 +3,7 @@
 内置数据库的setu插件, 另外尝试降低因为风控发不出图的概率(随机修改左上角一颗像素点) (tx好像改了算法, 作用不明显了)
 
 
-### 目前数据库去除unavailable, 共72642条记录
+### 目前数据库去除unavailable, 共73969条记录
 
 ghs比较纯粹, 只有一般的权限控制, 相比完整版功能简单
 
@@ -77,15 +77,15 @@ setu命令:
 superuser指令:
 
     r18名单: 查看r18有哪些群聊或者账号
-
+    
     add_r18 xxx: 添加r18用户/群聊
-
+    
     del_r18 xxx: 移除r18用户
-
+    
     disactivate | 解除禁用 xxx: 恢复该群的setu功能
-
+    
     ban_setu xxx: 禁用xxx群聊的色图权限
-
+    
     setu_proxy 更换setu代理(当默pixiv.re不可用时), 先发送setu_proxy, 然后他会给你一个魔方阵, 自己选择用哪个, 也可以用自己的
 
 
@@ -99,4 +99,4 @@ superuser指令:
 其他指令:
 
     setu_help
-    
+
