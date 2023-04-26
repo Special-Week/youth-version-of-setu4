@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Union
 
 from nonebot import get_driver
 from pydantic import BaseSettings
@@ -11,7 +12,7 @@ class Config(BaseSettings):
     setu_max_num: int = 10
     config_path: Path = Path("data/youth-version-of-setu4")
     config_file: Path = config_path / "config.json"
-    setu_save = False
+    setu_save: Union[bool, str] = False
 
     class Config:
         extra = "ignore"
