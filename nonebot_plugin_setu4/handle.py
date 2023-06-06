@@ -4,6 +4,7 @@ import os
 import platform
 import random
 from re import sub
+from typing import Tuple
 
 import nonebot
 from nonebot.adapters.onebot.v11 import (Bot, GroupMessageEvent, Message,
@@ -11,8 +12,7 @@ from nonebot.adapters.onebot.v11 import (Bot, GroupMessageEvent, Message,
                                          PrivateMessageEvent)
 from nonebot.log import logger
 from nonebot.matcher import Matcher
-from nonebot.params import ArgPlainText, CommandArg
-from nonebot.typing import T_State
+from nonebot.params import CommandArg, RegexGroup
 
 from .config import config
 from .get_data import get_setu
@@ -157,11 +157,10 @@ class SetuHandle:
     async def main(
         self,
         bot: Bot, 
-        state: T_State,
         matcher: Matcher,
         event: MessageEvent, 
+        args: Tuple = RegexGroup()
     ):
-        args = list(state["_matched_groups"])
         r18flag = args[2]
         key = args[3]                 # 获取关键词参数
         key = sub('[\'\"]', '', key)  # 去掉引号防止sql注入
