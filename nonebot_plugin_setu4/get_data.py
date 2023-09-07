@@ -26,28 +26,22 @@ class GetSetu:
 
     # 返回列表,内容为setu消息(列表套娃)
     async def get_setu(
-        self, 
-        num: int = 1, 
-        quality: int = 75, 
-        r18: bool = False, 
-        keywords: list = None
+        self, num: int = 1, quality: int = 75, r18: bool = False, keywords: list = None
     ) -> list:
         if keywords is None:
             keywords = []
         data = []
         # sql操作,根据keyword和r18进行查询拿到数据, sql操作要避免选中status为unavailable的
-        if not keywords:   
-            sql = f"SELECT pid,title,author,r18,tags,urls from main where r18='{r18}' and status!='unavailable' order by random() limit {num}"
+        if not keywords:
+            sql = f"SELECT pid,title,author,r18,tags,urls from main where r18={r18} and status!='unavailable' order by random() limit {num}"
         elif len(keywords) == 1:
-            sql = f"SELECT pid,title,author,r18,tags,urls from main where (tags like '%{keywords[0]}%' or title like '%{keywords[0]}%' or author like '%{keywords[0]}%') and r18='{r18}' and status!='unavailable' order by random() limit {num}"
-        else:               # 多tag的情况下的sql语句
+            sql = f"SELECT pid,title,author,r18,tags,urls from main where (tags like '%{keywords[0]}%' or title like '%{keywords[0]}%' or author like '%{keywords[0]}%') and r18={r18} and status!='unavailable' order by random() limit {num}"
+        else:  # 多tag的情况下的sql语句
             tag_sql = "".join(
-                f"tags like '%{i}%'"
-                if i == keywords[-1]
-                else f"tags like '%{i}%' and "
+                f"tags like '%{i}%'" if i == keywords[-1] else f"tags like '%{i}%' and "
                 for i in keywords
             )
-            sql = f"SELECT pid,title,author,r18,tags,urls from main where (({tag_sql}) and r18='{r18}' and status!='unavailable') order by random() limit {num}"
+            sql = f"SELECT pid,title,author,r18,tags,urls from main where (({tag_sql}) and r18={r18} and status!='unavailable') order by random() limit {num}"
         cursor = self.cur.execute(sql)
         db_data = cursor.fetchall()
 
@@ -61,34 +55,19 @@ class GetSetu:
             data = await asyncio.gather(*tasks)
         return data
 
-
-
-    async def pic(
-        self,
-        setu: list, 
-        quality: int, 
-        client: AsyncClient
-    ) -> list:
+    async def pic(self, setu: list, quality: int, client: AsyncClient) -> list:
         """返回setu消息列表,内容 [图片, 信息, True/False, url]"""
-        setu_proxy = utils.read_proxy()            # 读取代理
-        setu_pid = setu[0]                   # pid
-        setu_title = setu[1]                 # 标题
-        setu_author = setu[2]                # 作者
-        setu_r18 = setu[3]                   # r18
-        setu_tags = setu[4]                  # 标签
-        setu_url = setu[5].replace('i.pixiv.re', setu_proxy)     # 图片url
+        setu_proxy = utils.read_proxy()  # 读取代理
+        setu_pid = str(setu[0])  # pid
+        setu_title = setu[1]  # 标题
+        setu_author = setu[2]  # 作者
+        setu_r18 = str(setu[3])  # r18
+        setu_tags = setu[4]  # 标签
+        setu_url = setu[5].replace("i.pixiv.re", setu_proxy)  # 图片url
 
-        data = (
-            "标题:"
-            + setu_title
-            + "\npid:"
-            + str(setu_pid)
-            + "\n画师:"
-            + setu_author
-        )
+        data = f"标题:{setu_title}" + "\npid:" + setu_pid + "\n画师:" + setu_author
 
-        logger.info("\n"+data+"\ntags:" +
-                    setu_tags+"\nR18:"+setu_r18)
+        logger.info("\n" + data + "\ntags:" + setu_tags + "\nR18:" + setu_r18)
         file_name = setu_url.split("/")[-1]
 
         # 判断文件是否本地存在
@@ -113,7 +92,7 @@ class GetSetu:
                         f.write(content)
                     self.all_file_name.append(file_name)
                 except Exception as e:
-                    logger.error(f'图片存储失败: {e}')
+                    logger.error(f"图片存储失败: {e}")
         try:
             pic = await self.change_pixel(image, quality)
         except Exception as e:
@@ -121,46 +100,40 @@ class GetSetu:
             return [self.error, f"图片处理失败: {e}", False, setu_url]
         return [pic, data, True, setu_url]
 
-
-
-    async def change_pixel(
-        self,
-        image: Image, 
-        quality: int
-    ) -> bytes:
+    async def change_pixel(self, image: Image, quality: int) -> bytes:
         """图片左右镜像,并且随机修改第一个像素点"""
         image = image.transpose(Image.FLIP_LEFT_RIGHT)
         image = image.convert("RGB")
-        image.load()[0, 0] = (random.randint(0, 255),
-                            random.randint(0, 255), random.randint(0, 255))
+        image.load()[0, 0] = (
+            random.randint(0, 255),
+            random.randint(0, 255),
+            random.randint(0, 255),
+        )
         byte_data = BytesIO()
         image.save(byte_data, format="JPEG", quality=quality)
         return byte_data.getvalue()
 
-    async def down_pic(
-        self,
-        url: str, 
-        client: AsyncClient
-    ):
+    async def down_pic(self, url: str, client: AsyncClient):
         """下载图片并且返回content(bytes),或者status_code(int)"""
         try:
             re = await client.get(url=url, timeout=120)
             if re.status_code != 200:
                 if re.status_code == 404:
-                    await self.update_status_unavailable(url.replace(utils.read_proxy(), 'i.pixiv.re'))
+                    await self.update_status_unavailable(
+                        url.replace(utils.read_proxy(), "i.pixiv.re")
+                    )
                 return re.status_code
             logger.success("成功获取图片")
             return re.content
         except Exception:
             return 408
-        
-    
+
     async def update_status_unavailable(self, urls: str) -> None:
         """更新数据库中的图片状态为unavailable"""
         # 手搓sql语句
         sql = f"UPDATE main set status='unavailable' where urls='{urls}'"
         self.cur.execute(sql)  # 执行
-        self.conn.commit()                   # 提交事务
+        self.conn.commit()  # 提交事务
 
 
 get_setu = GetSetu()
