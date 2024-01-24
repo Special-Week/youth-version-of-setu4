@@ -7,9 +7,14 @@ from re import sub
 from typing import Tuple
 
 import nonebot
-from nonebot.adapters.onebot.v11 import (Bot, GroupMessageEvent, Message,
-                                         MessageEvent, MessageSegment,
-                                         PrivateMessageEvent)
+from nonebot.adapters.onebot.v11 import (
+    Bot,
+    GroupMessageEvent,
+    Message,
+    MessageEvent,
+    MessageSegment,
+    PrivateMessageEvent,
+)
 from nonebot.log import logger
 from nonebot.matcher import Matcher
 from nonebot.params import CommandArg, RegexGroup
@@ -22,11 +27,10 @@ from .utils import setu_help, utils
 
 class SetuHandle:
     def __init__(self) -> None:
-        self.max_num = config.setu_max_num      # 最大数量
-        self.cd_dir = {}                        # cd字典
-        self.cd_time = config.setu_cd           # cd时间
-        self.withdraw_time = config.setu_withdraw_time      # 撤回时间
-
+        self.max_num = config.setu_max_num  # 最大数量
+        self.cd_dir = {}  # cd字典
+        self.cd_time = config.setu_cd  # cd时间
+        self.withdraw_time = config.setu_withdraw_time  # 撤回时间
 
     async def number_check(
         self,
@@ -44,7 +48,9 @@ class SetuHandle:
         else:
             quality = 95
         if num >= 3:
-            await matcher.send(f"由于数量过多请等待\n当前图片质量为{quality}\n3-6:quality = 70\n7-{self.max_num}:quality = 50")
+            await matcher.send(
+                f"由于数量过多请等待\n当前图片质量为{quality}\n3-6:quality = 70\n7-{self.max_num}:quality = 50"
+            )
         # 记录cd
         self.cd_dir.update({qid: event.time})
         return quality
@@ -66,14 +72,16 @@ class SetuHandle:
         except Exception as e:
             await matcher.finish(f"Error: {str(e)}")
 
-        
         # 发送的消息列表
         message_list = []
         for pic in data:
             # 如果状态为True,说明图片拿到了
             if pic[2]:
-                message = f"{random.choice(setu_sendmessage)}{flag_log}" + \
-                            Message(pic[1]) + MessageSegment.image(pic[0])
+                message = (
+                    f"{random.choice(setu_sendmessage)}{flag_log}"
+                    + Message(pic[1])
+                    + MessageSegment.image(pic[0])
+                )
                 flag_log = ""
             else:
                 message = pic[0] + pic[1]
@@ -85,12 +93,21 @@ class SetuHandle:
             if isinstance(event, PrivateMessageEvent):
                 # 私聊直接发送
                 for msg in message_list:
-                    setu_msg_id.append((await matcher.send(msg))['message_id'])
+                    setu_msg_id.append((await matcher.send(msg))["message_id"])
             elif isinstance(event, GroupMessageEvent):
                 # 群聊以转发消息的方式发送
-                msgs = [utils.to_json(msg, bot.self_id, "setu-bot")
-                        for msg in message_list]
-                setu_msg_id.append((await bot.call_api('send_group_forward_msg', group_id=event.group_id, messages=msgs))['message_id'])
+                msgs = [
+                    utils.to_json(msg, bot.self_id, "setu-bot") for msg in message_list
+                ]
+                setu_msg_id.append(
+                    (
+                        await bot.call_api(
+                            "send_group_forward_msg",
+                            group_id=event.group_id,
+                            messages=msgs,
+                        )
+                    )["message_id"]
+                )
 
         # 发送失败
         except Exception as e:
@@ -98,7 +115,9 @@ class SetuHandle:
             logger.warning(e)
             self.cd_dir.pop(event.get_user_id())
             await matcher.finish(
-                message=Message(f"消息被风控了捏，图发不出来，请尽量减少发送的图片数量尝试捕获错误信息: {str(e)}"),
+                message=Message(
+                    f"消息被风控了捏，图发不出来，请尽量减少发送的图片数量尝试捕获错误信息: {str(e)}"
+                ),
                 at_sender=True,
             )
 
@@ -108,7 +127,6 @@ class SetuHandle:
                 await asyncio.sleep(self.withdraw_time)
                 for msg_id in setu_msg_id:
                     await bot.delete_msg(message_id=msg_id)
-
 
     async def cd_notallow(
         self,
@@ -124,9 +142,9 @@ class SetuHandle:
             seconds = time_last
         cd_msg = f"{f'{str(hours)}小时' if hours else ''}{f'{str(minutes)}分钟' if minutes else ''}{f'{str(seconds)}秒' if seconds else ''}"
 
-        await matcher.send(f"{random.choice(setu_sendcd)} 你的CD还有{cd_msg}", at_sender=True)
-
-
+        await matcher.send(
+            f"{random.choice(setu_sendcd)} 你的CD还有{cd_msg}", at_sender=True
+        )
 
     async def r18_ban_check(
         self,
@@ -152,19 +170,17 @@ class SetuHandle:
                     r18 = bool(r18flag)
         return r18
 
-
-
     async def main(
         self,
-        bot: Bot, 
+        bot: Bot,
         matcher: Matcher,
-        event: MessageEvent, 
-        args: Tuple = RegexGroup()
+        event: MessageEvent,
+        args: Tuple = RegexGroup(),
     ):
         r18flag = args[2]
-        key = args[3]                 # 获取关键词参数
-        key = sub('[\'\"]', '', key)  # 去掉引号防止sql注入
-        num = args[1]          # 获取数量参数
+        key = args[3]  # 获取关键词参数
+        key = sub("['\"]", "", key)  # 去掉引号防止sql注入
+        num = args[1]  # 获取数量参数
         num = int(sub(r"[张|个|份|x|✖️|×|X|*]", "", num)) if num else 1
 
         qid = event.get_user_id()
@@ -183,7 +199,7 @@ class SetuHandle:
             if key
             else f"\nR18 == {str(r18)}\nkeyword == NULL\nnum == {num}\n"
         )
-        logger.info(f"key = {key}\tr18 = {r18}\tnum = {num}")       # 控制台输出
+        logger.info(f"key = {key}\tr18 = {r18}\tnum = {num}")  # 控制台输出
         # cd判断,superusers无视cd
         if (
             cd > self.cd_time
@@ -194,15 +210,7 @@ class SetuHandle:
         else:
             await self.cd_notallow(cd, matcher)
 
-
-
-
-
-    async def add_r18list(
-        self,
-        matcher: Matcher,
-        arg: Message = CommandArg()
-    ):
+    async def add_r18list(self, matcher: Matcher, arg: Message = CommandArg()):
         # 获取消息文本
         msg = arg.extract_plain_text().strip().split()[0]
         # 如果不是数字就返回
@@ -217,24 +225,17 @@ class SetuHandle:
         utils.write_configjson()
         await matcher.finish(f"ID:{msg}添加成功")
 
-
-
-    async def del_r18list(
-        self,
-        matcher: Matcher,
-        arg: Message = CommandArg()
-    ):
+    async def del_r18list(self, matcher: Matcher, arg: Message = CommandArg()):
         # 获取消息文本
         msg = arg.extract_plain_text().strip()
-        try:    
+        try:
             utils.r18list.remove(msg)
-        except ValueError:          # 如果不存在就返回
+        except ValueError:  # 如果不存在就返回
             await matcher.finish(f"ID:{msg}不存在")
         # 写入文件
-        utils.config.update({"r18list": utils.r18list})    # 更新dict
-        utils.write_configjson()                        # 写入文件
+        utils.config.update({"r18list": utils.r18list})  # 更新dict
+        utils.write_configjson()  # 写入文件
         await matcher.finish(f"ID:{msg}删除成功")
-
 
     async def get_r18list(
         self,
@@ -242,35 +243,23 @@ class SetuHandle:
     ):
         await matcher.finish("R18名单：\n" + str(utils.r18list))
 
-
     async def setu_help(
         self,
         matcher: Matcher,
     ):
-        await matcher.finish(setu_help)   # 发送
+        await matcher.finish(setu_help)  # 发送
 
-
-
-    async def admin_ban_setu(
-        self,
-        matcher: Matcher,
-        event: GroupMessageEvent
-    ):
+    async def admin_ban_setu(self, matcher: Matcher, event: GroupMessageEvent):
         gid: str = str(event.group_id)
         # 如果存在
         if gid in utils.banlist:
             await matcher.finish(f"ID:{gid}已存在")
         utils.banlist.append(gid)
-        utils.config.update({"banlist": utils.banlist})        # 更新dict
-        utils.write_configjson()                              # 写入文件
+        utils.config.update({"banlist": utils.banlist})  # 更新dict
+        utils.write_configjson()  # 写入文件
         await matcher.finish(f"ID:{gid}禁用成功, 恢复需要找superuser")
 
-
-    async def su_ban_setu(
-        self,
-        matcher: Matcher,
-        arg: Message = CommandArg()
-    ):
+    async def su_ban_setu(self, matcher: Matcher, arg: Message = CommandArg()):
         # 获取消息文本
         msg = arg.extract_plain_text().strip()
         if not msg.isdigit():
@@ -278,66 +267,55 @@ class SetuHandle:
         # 如果已经存在就返回
         if msg in utils.banlist:
             await matcher.finish(f"ID:{msg}已存在")
-        utils.banlist.append(msg)            # 添加到list
-        utils.config.update({"banlist": utils.banlist})    # 更新dict
-        utils.write_configjson()              # 写入文件
+        utils.banlist.append(msg)  # 添加到list
+        utils.config.update({"banlist": utils.banlist})  # 更新dict
+        utils.write_configjson()  # 写入文件
         await matcher.finish(f"ID:{msg}禁用成功")
 
-
-
-    async def disactivate(
-        self,
-        matcher: Matcher,
-        arg: Message = CommandArg()
-    ):
+    async def disactivate(self, matcher: Matcher, arg: Message = CommandArg()):
         # 获取消息文本
         msg = arg.extract_plain_text().strip()
         try:
-            utils.banlist.remove(msg) # 如果不存在就直接finish
+            utils.banlist.remove(msg)  # 如果不存在就直接finish
         except ValueError:
             await matcher.finish(f"ID:{msg}不存在")
-        utils.config.update({"banlist": utils.banlist})    # 更新dict 
-        utils.write_configjson()                # 写入文件
+        utils.config.update({"banlist": utils.banlist})  # 更新dict
+        utils.write_configjson()  # 写入文件
         await matcher.finish(f"ID:{msg}解除成功")
-
-
 
     async def set_proxy(self, proxy):
         utils.config.update({"setu_proxy": proxy})
         utils.write_configjson()
-        plat = platform.system().lower()    # 获取系统
-        if plat == 'windows':
-            result = os.popen(f"ping {proxy}").read()  # windows下的ping
-        elif plat == 'linux':   
-            result = os.popen(f"ping -c 4 {proxy}").read() # linux下的ping
-        return result
+        plat = platform.system().lower()  # 获取系统
+        if plat == "windows":
+            return os.popen(f"ping {proxy}").read()
+        elif plat == "linux":
+            return os.popen(f"ping -c 4 {proxy}").read()
+        else:
+            return "不支持的系统"
 
-
-    async def replace_proxy_got(
-        self,
-        matcher: Matcher,
-        event: MessageEvent
-    ):
+    async def replace_proxy_got(self, matcher: Matcher, event: MessageEvent):
         msg: str = str(event.get_message())  # 获取消息文本
         if not msg or msg.isspace():
             await matcher.finish("需要输入proxy")
-        await matcher.send(f"{msg}已经替换, 正在尝试ping操作验证连通性") # 发送消息
+        await matcher.send(f"{msg}已经替换, 正在尝试ping操作验证连通性")  # 发送消息
         result = await self.set_proxy(msg.strip())
-        await matcher.send(f"{result}\n如果丢失的数据比较多, 请考虑重新更换代理")  # 发送消息
+        await matcher.send(
+            f"{result}\n如果丢失的数据比较多, 请考虑重新更换代理"
+        )  # 发送消息
 
-    async def replace_proxy(
-        self,
-        matcher: Matcher, 
-        arg: Message = CommandArg()
-    ):
+    async def replace_proxy(self, matcher: Matcher, arg: Message = CommandArg()):
         msg = arg.extract_plain_text().strip()  # 获取消息文本
         if not msg or msg.isspace():
-            await matcher.pause(f"请输入你要替换的proxy, 当前proxy为:{utils.read_proxy()}\ntips: 一些也许可用的proxy\ni.pixiv.re\nsex.nyan.xyz\npx2.rainchan.win\npximg.moonchan.xyz\npiv.deception.world\npx3.rainchan.win\npx.s.rainchan.win\npixiv.yuki.sh\npixiv.kagarise.workers.dev\npixiv.a-f.workers.dev\n等等....\n\neg:px2.rainchan.win\n警告:不要尝试命令行注入其他花里胡哨的东西, 可能会损伤你的电脑")
+            await matcher.pause(
+                f"请输入你要替换的proxy, 当前proxy为:{utils.read_proxy()}\ntips: 一些也许可用的proxy\ni.pixiv.re\nsex.nyan.xyz\npx2.rainchan.win\npximg.moonchan.xyz\npiv.deception.world\npx3.rainchan.win\npx.s.rainchan.win\npixiv.yuki.sh\npixiv.kagarise.workers.dev\npixiv.a-f.workers.dev\n等等....\n\neg:px2.rainchan.win\n警告:不要尝试命令行注入其他花里胡哨的东西, 可能会损伤你的电脑"
+            )
         else:
-            await matcher.send(f"{msg}已经替换, 正在尝试ping操作验证连通性") # 发送消息
+            await matcher.send(f"{msg}已经替换, 正在尝试ping操作验证连通性")  # 发送消息
             result = await self.set_proxy(msg)
-            await matcher.finish(f"{result}\n如果丢失的数据比较多, 请考虑重新更换代理")  # 发送消息
-
+            await matcher.finish(
+                f"{result}\n如果丢失的数据比较多, 请考虑重新更换代理"
+            )  # 发送消息
 
 
 setu_handle = SetuHandle()

@@ -1,9 +1,10 @@
 import json
 from .config import config
 
+
 class Utils:
     def __init__(self) -> None:
-        self.config = json.load(open(config.config_file, 'r', encoding="utf-8"))
+        self.config = json.load(open(config.config_file, "r", encoding="utf-8"))
         """
         json结构:
         {
@@ -21,44 +22,26 @@ class Utils:
         self.r18list = self.config["r18list"]
         self.banlist = self.config["banlist"]
 
-
     def write_configjson(self) -> None:
         """写入json"""
-        with open(config.config_file, 'w', encoding="utf-8") as fp:
+        with open(config.config_file, "w", encoding="utf-8") as fp:
             json.dump(self.config, fp, ensure_ascii=False)
-
 
     def read_proxy(self) -> str:
         """读取代理"""
         return self.config["setu_proxy"]
-
 
     def write_proxy(self, proxy: str) -> None:
         """写入代理"""
         self.config["setu_proxy"] = proxy
         self.write_configjson()
 
-
-    def to_json(
-        self, 
-        msg, 
-        uin: str,
-        name: str
-    ) -> dict:
+    def to_json(self, msg, uin: str, name: str) -> dict:
         """转换为dict, 转发消息用"""
-        return {
-            'type': 'node',
-            'data': {
-                'name': name,
-                'uin': uin,
-                'content': msg
-            }
-        }
-    
+        return {"type": "node", "data": {"name": name, "uin": uin, "content": msg}}
+
 
 utils = Utils()
-
-
 
 
 setu_help = """命令头: setu|色图|涩图|想色色|来份色色|来份色图|想涩涩|多来点|来点色图|来张setu|来张色图|来点色色|色色|涩涩  (任意一个)

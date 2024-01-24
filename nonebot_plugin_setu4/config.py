@@ -24,10 +24,6 @@ if not config.config_path.exists():
 
 
 if not config.config_file.exists():
-    config_json = {
-        "r18list": [],
-        "banlist": [],
-        "setu_proxy": "i.pixiv.re"
-    }
+    config_json = {"r18list": [], "banlist": [], "setu_proxy": "i.pixiv.re"}
     with open(config.config_file, "w", encoding="utf-8") as f:
         json.dump(config_json, f, indent=4, ensure_ascii=False)

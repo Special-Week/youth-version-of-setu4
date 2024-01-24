@@ -4,6 +4,7 @@ import random
 import sqlite3
 from io import BytesIO
 from pathlib import Path
+from typing import List, Union
 
 from httpx import AsyncClient
 from nonebot.log import logger
@@ -26,7 +27,11 @@ class GetSetu:
 
     # 返回列表,内容为setu消息(列表套娃)
     async def get_setu(
-        self, num: int = 1, quality: int = 75, r18: bool = False, keywords: list = None
+        self,
+        num: int = 1,
+        quality: int = 75,
+        r18: bool = False,
+        keywords: Union[List, None] = None,
     ) -> list:
         if keywords is None:
             keywords = []
@@ -55,7 +60,7 @@ class GetSetu:
             data = await asyncio.gather(*tasks)
         return data
 
-    async def pic(self, setu: list, quality: int, client: AsyncClient) -> list:
+    async def pic(self, setu: List, quality: int, client: AsyncClient) -> list:
         """返回setu消息列表,内容 [图片, 信息, True/False, url]"""
         setu_proxy = utils.read_proxy()  # 读取代理
         setu_pid = str(setu[0])  # pid
@@ -78,7 +83,7 @@ class GetSetu:
         else:
             logger.info(f"图片本地不存在,正在去{setu_proxy}下载")
             content = await self.down_pic(setu_url, client)
-            if type(content) == int:
+            if isinstance(content, int):
                 return [self.error, f"图片下载失败, 状态码{content}", False, setu_url]
             # 尝试打开图片, 如果失败就返回错误信息
             try:
@@ -100,7 +105,7 @@ class GetSetu:
             return [self.error, f"图片处理失败: {e}", False, setu_url]
         return [pic, data, True, setu_url]
 
-    async def change_pixel(self, image: Image, quality: int) -> bytes:
+    async def change_pixel(self, image, quality: int) -> bytes:
         """图片左右镜像,并且随机修改第一个像素点"""
         image = image.transpose(Image.FLIP_LEFT_RIGHT)
         image = image.convert("RGB")

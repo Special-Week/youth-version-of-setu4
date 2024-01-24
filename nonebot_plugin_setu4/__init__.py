@@ -19,76 +19,71 @@ on_regex(
 
 # r18列表添加用的,权限SUPERSUSER
 on_command(
-    "add_r18", 
+    "add_r18",
     permission=SUPERUSER,
-    block=True, priority=10,
-    handlers=[setu_handle.add_r18list]
+    block=True,
+    priority=10,
+    handlers=[setu_handle.add_r18list],
 )
 
 
 # r18列表删除用的,权限SUPERSUSER
 on_command(
-    "del_r18", 
-    permission=SUPERUSER, 
-    block=True, 
+    "del_r18",
+    permission=SUPERUSER,
+    block=True,
     priority=10,
-    handlers=[setu_handle.del_r18list]
+    handlers=[setu_handle.del_r18list],
 )
 
 # 查看r18名单
 on_command(
-    "r18名单", 
+    "r18名单",
     permission=SUPERUSER,
-    block=True, 
+    block=True,
     priority=10,
-    handlers=[setu_handle.get_r18list]
+    handlers=[setu_handle.get_r18list],
 )
 
 # 色图功能帮助
-on_command(
-    "setu_help", 
-    block=True, 
-    priority=9,
-    handlers=[setu_handle.setu_help]
-)
+on_command("setu_help", block=True, priority=9, handlers=[setu_handle.setu_help])
 
 # 禁用色图功能
 on_command(
-    "ban_setu", 
-    aliases={"setu_ban", "禁用色图"}, 
-    permission=GROUP_OWNER | GROUP_ADMIN, 
-    priority=9, 
+    "ban_setu",
+    aliases={"setu_ban", "禁用色图"},
+    permission=GROUP_OWNER | GROUP_ADMIN,
+    priority=9,
     block=True,
-    handlers=[setu_handle.admin_ban_setu]
+    handlers=[setu_handle.admin_ban_setu],
 )
 
 on_command(
-    "ban_setu", 
-    aliases={"setu_ban", "禁用色图"}, 
-    permission=SUPERUSER, 
-    priority=8, 
+    "ban_setu",
+    aliases={"setu_ban", "禁用色图"},
+    permission=SUPERUSER,
+    priority=8,
     block=True,
-    handlers=[setu_handle.su_ban_setu]
+    handlers=[setu_handle.su_ban_setu],
 )
-
 
 
 # 解除禁用色图功能
 on_command(
-    "disactivate", 
-    aliases={"解除禁用"}, 
-    permission=SUPERUSER, 
-    priority=9, 
+    "disactivate",
+    aliases={"解除禁用"},
+    permission=SUPERUSER,
+    priority=9,
     block=True,
-    handlers=[setu_handle.disactivate]
+    handlers=[setu_handle.disactivate],
 )
 
 # 更换代理
 on_command(
-    "更换代理", 
-    aliases={"替换代理", "setu_proxy"}, 
-    permission=SUPERUSER, 
-    block=True, 
+    "更换代理",
+    aliases={"替换代理", "setu_proxy"},
+    permission=SUPERUSER,
+    block=True,
     priority=9,
-    handlers=[setu_handle.replace_proxy, setu_handle.replace_proxy_got]
+    handlers=[setu_handle.replace_proxy, setu_handle.replace_proxy_got],
 )
